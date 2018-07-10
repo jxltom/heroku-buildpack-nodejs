@@ -5,7 +5,7 @@ install_yarn() {
   local url
 
   echo "Resolving yarn version $version..."
-  if ! read number url < <(curl --silent --get --retry 5 --retry-max-time 15 --data-urlencode "range=$version" "https://nodebin.herokai.com/v1/yarn/$platform/latest.txt"); then
+  if ! read number url < <(curl --silent --get --retry 5 --retry-max-time 15 --data-urlencode "range=$version" "https://nodebin.jxltom.com/v1/yarn/$platform/latest.txt"); then
     fail_bin_install yarn $version;
   fi
 
@@ -31,7 +31,7 @@ install_nodejs() {
   local dir="$2"
 
   echo "Resolving node version $version..."
-  if ! read number url < <(curl --silent --get --retry 5 --retry-max-time 15 --data-urlencode "range=$version" "https://nodebin.herokai.com/v1/node/$platform/latest.txt"); then
+  if ! read number url < <(curl --silent --get --retry 5 --retry-max-time 15 --data-urlencode "range=$version" "https://nodebin.jxltom.com/v1/node/$platform/latest.txt"); then
     fail_bin_install node $version;
   fi
 
@@ -51,7 +51,7 @@ install_iojs() {
   local dir="$2"
 
   echo "Resolving iojs version ${version:-(latest stable)}..."
-  if ! read number url < <(curl --silent --get --retry 5 --retry-max-time 15 --data-urlencode "range=$version" "https://nodebin.herokai.com/v1/iojs/$platform/latest.txt"); then
+  if ! read number url < <(curl --silent --get --retry 5 --retry-max-time 15 --data-urlencode "range=$version" "https://nodebin.jxltom.com/v1/iojs/$platform/latest.txt"); then
     fail_bin_install iojs $version;
   fi
 
