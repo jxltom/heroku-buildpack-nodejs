@@ -2,6 +2,64 @@
 
 ## master
 
+## v148 (2019-05-02)
+- Dark-launch new semver matching logic for node binaries (#663)
+
+## v147 (2019-05-01)
+- Dark-launch new semver matching logic for yarn binaries (#661)
+- Add node 12.x as a supported version for Node Metrics beta (#662)
+
+## v146 (2019-04-25)
+- Deprecate io.js as an alternative runtime (#658)
+- Prototyping new version resolution approach to replace Nodebin (#649 - #657)
+
+## v145 (2019-04-16)
+- Separate prebuild step in log output (#646)
+- Clean up script metrics and logging (#647)
+
+## v144 (2019-04-08)
+- Remove temporary wraning about "run build" change (#644)
+
+## v143 (2019-03-28)
+- Internal logging changes (#637, #631, #630)
+
+## v142 (2019-03-11)
+- Add temporary warning about "run build" when the build fails as well (#639)
+
+## v141 (2019-03-11)
+- Add temporary warning about "run build" change to log output (#636)
+
+## v140 (2019-03-11)
+- Run the build script by default (#628)
+
+## v139 (2019-03-04)
+- Make breaking change warning header brighter (#627)
+
+## v138 (2019-02-20)
+- Add new Build header (#625)
+- Fix yarn run error when script is empty string (#624)
+
+## v137 (2019-02-14)
+- Internal logging changes (#620, #618, #621)
+- Detect build scripts even when they are empty (#617)
+
+## v136 (2019-02-09)
+- Add warning for the upcoming run build change (#616)
+
+## v135 (2019-02-06)
+
+- Fix bug where failing builds on CI would not fail CI (#613)
+- Internal logging changes (#596, #600)
+
+## v134 (2018-12-20)
+
+- Internal changes (#593, #591)
+- Handle `$MEMORY_AVAILABLE` when `memory.limit_in_bytes` is nonsensically large (#531)
+
+## v133 (2018-11-28)
+
+- Add warning for flatmap-stream 404 failure (#590)
+
 ## v132 (2018-11-12)
 
 - Quietly add new build script behavior behind a flag (#584, #585)
@@ -66,6 +124,7 @@
 ## v119 (2018-02-28)
 
 - Install and prune devDependencies by default (#519)
+- [Breaking] Stop setting the env var `NPM_CONFIG_PRODUCTION=true` by default
 
 ## v118 (2018-02-02)
 

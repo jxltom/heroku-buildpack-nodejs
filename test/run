@@ -16,27 +16,38 @@ testFlatmapStream() {
 }
 
 testBuildScriptBehavior() {
-  # opt in to new build script behavior
-  cache=$(mktmpdir)
-  env_dir=$(mktmpdir)
-  echo "true" > $env_dir/NEW_BUILD_SCRIPT_BEHAVIOR
-
   # The 'build' script is run by default
-  compile "build-script" $cache $env_dir
+  compile "build-script"
   assertCaptured "Running build"
   assertCapturedSuccess
 
   # the 'heroku-postbuild' script takes precedence over the 'build' script
-  compile "build-script-override" $cache $env_dir
-  assertCaptured "Detected both 'build' and 'heroku-postbuild' scripts"
+  compile "build-script-override"
+  assertCaptured "Detected both \"build\" and \"heroku-postbuild\" scripts"
   assertCaptured "Running heroku-postbuild"
   assertCapturedSuccess
 }
 
-testBuildScriptOptIn() {
-  compile "build-script-opt-in"
-  assertCaptured "Running build"
-  assertCaptured "Opting in to new default build script behavior"
+testBuildScriptYarn() {
+  compile "build-script-yarn"
+  assertCaptured "Running build (yarn)"
+  assertCaptured "build hook message"
+  assertCapturedSuccess
+}
+
+testPreferEmptyHerokuPostbuildOverBuild() {
+  compile "empty-heroku-postbuild"
+  assertCaptured "Detected both \"build\" and \"heroku-postbuild\" scripts"
+  assertCaptured "Running heroku-postbuild"
+  assertNotCaptured "build hook message"
+  assertCapturedSuccess
+}
+
+testEmptyHerokuPostbuildWithYarn() {
+  compile "empty-heroku-postbuild-yarn"
+  assertCaptured "Running heroku-postbuild (yarn)"
+  assertNotCaptured "build hook message"
+  assertNotCaptured "Script must exist"
   assertCapturedSuccess
 }
 
@@ -479,13 +490,6 @@ testInvalidNodeSemver() {
   assertCapturedError
 }
 
-testInvalidIo() {
-  compile "invalid-io"
-  assertCaptured "Resolving iojs version 2.0.99"
-  assertCaptured "Could not find Iojs version corresponding to version requirement: 2.0.99"
-  assertCapturedError
-}
-
 testSignatureInvalidation() {
   cache=$(mktmpdir)
   env_dir=$(mktmpdir)
@@ -527,10 +531,8 @@ testDetectWithoutPackageJson() {
 
 testIoJs() {
   compile "iojs"
-  assertCaptured "engines.iojs (package.json):  1.0."
-  assertCaptured "Downloading and installing iojs 1.0."
-  assertNotCaptured "Downloading and installing npm"
-  assertCapturedSuccess
+  assertCaptured "io.js no longer supported"
+  assertCapturedError
 }
 
 testSpecificVersion() {
@@ -562,11 +564,6 @@ testOldNpm() {
   assertCapturedError
 }
 
-testOldNpm2() {
-  compile "failing-build"
-  assertCaptured "This version of npm (1.4.28) has several known issues"
-}
-
 testNonexistentNpm() {
   compile "nonexistent-npm"
   assertCaptured "Unable to install npm 1.1.65"
@@ -594,7 +591,6 @@ testNpmVersionSpecific() {
 
 testFailingBuild() {
   compile "failing-build"
-  assertCaptured "Building dependencies"
   assertCaptured "Build failed"
   assertCaptured "We're sorry this build is failing"
   assertNotCaptured "Checking startup method"
@@ -874,6 +870,12 @@ testCIEnvVars() {
   assertCapturedSuccess
 }
 
+# If compile fails, test-compile should also fail
+testCICompileFails() {
+  testCompile "failing-build"
+  assertCapturedError
+}
+
 testCIEnvVarsOverride() {
   env_dir=$(mktmpdir)
   echo "banana" > $env_dir/NODE_ENV
@@ -1031,6 +1033,96 @@ testMemoryMetrics() {
   assertFileNotContains "measure#buildpack.nodejs.exec.heroku-postbuild.memory=" $metrics_log
 }
 
+testBuildMetaData() {
+  local log_file=$(mktemp)
+
+  BUILDPACK_LOG_FILE="$log_file" compile "pre-post-build-scripts"
+
+  # build info
+  assertFileContains "node-package-manager=npm" $log_file
+  assertFileContains "checked-in-node-modules=false" $log_file
+  assertFileContains "has-node-lock-file=false" $log_file
+  assertFileContains "cache-status=not-found" $log_file
+  assertFileContains "node-build-success=true" $log_file
+  assertFileContains "build-time=" $log_file
+  assertFileContains "app-uuid=" $log_file
+  assertFileContains "build-uuid=" $log_file
+
+  # binary versions
+  assertFileContains "node-version-request=10.x" $log_file
+  assertFileContains "npm-version-request= " $log_file
+
+  # log build scripts
+  assertFileContains "heroku-prebuild-script=\"echo heroku-prebuild hook message\"" $log_file
+  assertFileContains "heroku-postbuild-script=\"echo heroku-postbuild hook message\"" $log_file
+  assertFileContains "build-script= " $log_file
+
+  # monitor calls
+  assertFileContains "install-node-binary-memory=" $log_file
+  assertFileContains "install-node-binary-time=" $log_file
+  assertFileContains "install-npm-binary-time=" $log_file
+  assertFileContains "install-npm-binary-memory=" $log_file
+  assertFileContains "heroku-prebuild-time=" $log_file
+  assertFileContains "heroku-prebuild-memory=" $log_file
+  assertFileContains "npm-install-time=" $log_file
+  assertFileContains "npm-install-memory=" $log_file
+  assertFileContains "heroku-postbuild-time=" $log_file
+  assertFileContains "heroku-postbuild-memory=" $log_file
+  assertFileContains "npm-prune-memory=" $log_file
+  assertFileContains "npm-prune-time=" $log_file
+
+  # erase the log file
+  echo "" > $log_file
+  BUILDPACK_LOG_FILE="$log_file" compile "yarn"
+
+  assertFileContains "node-package-manager=yarn" $log_file
+  assertFileContains "has-node-lock-file=true" $log_file
+  assertFileContains "yarn-version-request=1.x" $log_file
+  assertFileContains "yarn-version=1." $log_file
+  assertFileContains "install-yarn-binary-memory=" $log_file
+  assertFileContains "install-yarn-binary-time=" $log_file
+  assertFileContains "node-build-success=true" $log_file
+
+  # log resolve logic dark-launch
+  assertFileContains "resolve-matches-nodebin-yarn=true" $log_file
+  assertFileContains "resolve-matches-nodebin-node=true" $log_file
+}
+
+testFailingBuildMetaData() {
+  local log_file=$(mktemp)
+
+  BUILDPACK_LOG_FILE="$log_file" compile "bad-json"
+  assertFileContains "failure=invalid-package-json" $log_file
+  assertCapturedError
+
+  echo "" > $log_file
+  BUILDPACK_LOG_FILE="$log_file" compile "yarn-lockfile-out-of-date"
+  assertFileContains "failure=outdated-yarn-lockfile" $log_file
+  assertCapturedError
+}
+
+testPropagateAppUUID() {
+  env_dir=$(mktmpdir)
+  local log_file=$(mktemp)
+  local cache_dir=${2:-$(mktmpdir)}
+  echo "$log_file" > $env_dir/BUILDPACK_LOG_FILE
+
+  # save the generated app-uuid for the first build
+  compile "node-10" $cache_dir $env_dir
+  assertFileContains "app-uuid=" $log_file
+  local uuid=$(cat $log_file | sed -n -e 's/^.*app-uuid=\([^ ]*\).*/\1/p')
+
+  # create a new log file
+  log_file=$(mktemp)
+  echo "$log_file" > $env_dir/BUILDPACK_LOG_FILE
+
+  # recompile with the same cache directory
+  compile "node-10" $cache_dir $env_dir
+  assertFileContains "app-uuid" $log_file
+  # make sure that the app-uuid is the same
+  assertEquals "$uuid" "$(cat $log_file | sed -n -e 's/^.*app-uuid=\([^ ]*\).*/\1/p')"
+}
+
 testBinDetectWarnings() {
   detect "slugignore-package-json"
   assertCapturedError "'package.json' listed in '.slugignore' file"
@@ -1091,6 +1183,15 @@ compile() {
   cp -a "$(pwd)"/* ${bp_dir}
   cp -a ${bp_dir}/test/fixtures/$1/. ${compile_dir}
   capture ${bp_dir}/bin/compile ${compile_dir} ${2:-$(mktmpdir)} $3
+}
+
+testCompile() {
+  default_process_types_cleanup
+  bp_dir=$(mktmpdir)
+  compile_dir=$(mktmpdir)
+  cp -a "$(pwd)"/* ${bp_dir}
+  cp -a ${bp_dir}/test/fixtures/$1/. ${compile_dir}
+  capture ${bp_dir}/bin/test-compile ${compile_dir} ${2:-$(mktmpdir)} $3
 }
 
 # This is meant to be run after `compile`. `cleanupStartup` must be run
